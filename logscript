@@ -1,0 +1,3 @@
+resource.type="dataflow_step"
+severity="ERROR"
+textPayload:("UserCodeException" OR "Workflow failed" OR "RuntimeException")
