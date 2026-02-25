@@ -1,1 +1,1 @@
-# cricbuzz-odi-ranking-data  Features-Pavan-Bonam
+# cricbuzz-odi-ranking-data
