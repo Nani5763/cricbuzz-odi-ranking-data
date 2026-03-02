@@ -49,9 +49,9 @@
 #### PySpark Code:
 
     import requests
-from pyspark.sql import SparkSession
+    from pyspark.sql import SparkSession
 
-# Create Spark session
+    # Create Spark session
     spark = SparkSession.builder \
         .appName("Cricbuzz ODI Rankings") \
         .getOrCreate()
