@@ -1,0 +1,17 @@
+[
+    { "category": "bowlers", "formatType": "odi" },
+    { "category": "bowlers", "formatType": "test" },
+    { "category": "bowlers", "formatType": "t20" },
+
+    { "category": "allrounders", "formatType": "odi" },
+    { "category": "allrounders", "formatType": "test" },
+    { "category": "allrounders", "formatType": "t20" },
+
+    { "category": "batsmen", "formatType": "odi" },
+    { "category": "batsmen", "formatType": "test" },
+    { "category": "batsmen", "formatType": "t20" },
+
+    { "category": "teams", "formatType": "odi" },
+    { "category": "teams", "formatType": "test" },
+    { "category": "teams", "formatType": "t20" }
+]
