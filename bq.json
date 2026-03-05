@@ -1,7 +1,7 @@
 {
     "BigQuery Schema": [{
       "name": "rank",
-      "type": "STRING"
+      "type": "INT64"
      },
      {
       "name": "name",
