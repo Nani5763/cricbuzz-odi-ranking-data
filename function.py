@@ -1,55 +1,101 @@
-import datetime, json
+import datetime
+import json
 import functions_framework
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 import google.auth
 
-PROJECT_ID = "gcp-batch-5-project-1"
+PROJECT_ID = "cricbuzz-ranking-489310"
 REGION = "us-east1"
 TEMPLATE_GCS_PATH = "gs://dataflow-templates-us-east1/latest/GCS_Text_to_BigQuery"
 
 DF_PARAMS = {
-    "javascriptTextTransformGcsPath": "gs://bkt-rank-metadata-crk_new/udf.js",
-    "JSONPath": "gs://bkt-rank-metadata-crk_new/bq.json",
+    "javascriptTextTransformGcsPath": "gs://cricbuzz_ranking_testing/test_batsmen_rankings_testing/udf.js",
+    "JSONPath": "gs://cricbuzz_ranking_testing/test_batsmen_rankings_testing/bq.json",
     "javascriptTextTransformFunctionName": "transform",
-    "outputTable": "gcp-batch-5-project-1.odi_cricket_dataset.odi_batting_ranking",
-    "inputFilePattern": "gs://bkt-rank-data-crk_new/batsmen_rankings.csv",
-    "bigQueryLoadingTemporaryDirectory": "gs://bkt-rank-temp-crk_new/temp/",
+    "outputTable": "cricbuzz-ranking-489310.Test_batsmen_rankings_testing.test_batsmen_rankings",
+    "inputFilePattern": "gs://cricbuzz_ranking_testing/test_batsmen_rankings_testing/test_batsmen_rankings_testing.csv",
+    "bigQueryLoadingTemporaryDirectory": "gs://cricbuzz_ranking_testing/test_batsmen_rankings_testing/temp",
 }
 
 def _df_client():
-    creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+    creds, _ = google.auth.default(
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
     return build("dataflow", "v1b3", credentials=creds, cache_discovery=False)
 
-def trigger_df_job(cloud_event, environment=None):
+
+# ✅ Check if any Dataflow job is already running
+def is_dataflow_job_running():
     svc = _df_client()
+
+    request = svc.projects().locations().jobs().list(
+        projectId=PROJECT_ID,
+        location=REGION,
+        filter="ACTIVE"
+    )
+
+    response = request.execute()
+
+    if "jobs" in response:
+        for job in response["jobs"]:
+            if job["name"].startswith("jobtest4"):
+                print("Dataflow job already running:", job["name"])
+                return True
+
+    return False
+
+
+def trigger_df_job(cloud_event):
+    # ✅ Prevent duplicate jobs
+    if is_dataflow_job_running():
+        print("Skipping job creation. Dataflow job already running.")
+        return "job_already_running"
+
+    svc = _df_client()
+
     job_name = f"jobtest4-{datetime.datetime.utcnow():%Y%m%d-%H%M%S}"
+
+    print("REGION:", REGION)
+    print("Using template:", TEMPLATE_GCS_PATH)
 
     body = {
         "jobName": job_name,
         "parameters": DF_PARAMS,
-        "environment": environment or {},
+        "environment": {
+            "tempLocation": "gs://cricbuzz_ranking_testing/temp",
+            "zone": "us-east1-c"
+        }
     }
 
-    # ✅ Call GLOBAL endpoint and pass gcsPath param
-    req = svc.projects().templates().launch(
+    request = svc.projects().locations().templates().launch(
         projectId=PROJECT_ID,
-        gcsPath=TEMPLATE_GCS_PATH,   # query param
+        location=REGION,
+        gcsPath=TEMPLATE_GCS_PATH,
         body=body
     )
-    resp = req.execute()
-    print("Launched:", json.dumps(resp, indent=2))
+
+    response = request.execute()
+
+    print("Launched Dataflow job:")
+    print(json.dumps(response, indent=2))
+
     return job_name
+
 
 @functions_framework.cloud_event
 def hello_auditlog(cloudevent):
     print(f"Event type: {cloudevent['type']}")
-    if 'subject' in cloudevent:
+
+    if "subject" in cloudevent:
         print(f"Subject: {cloudevent['subject']}")
+
     payload = cloudevent.data.get("protoPayload")
+
     if payload:
         print(f"API method: {payload.get('methodName')}")
         print(f"Resource name: {payload.get('resourceName')}")
         print(f"Principal: {payload.get('authenticationInfo', {}).get('principalEmail')}")
+
     job = trigger_df_job(cloudevent)
+
     return {"status": "OK", "job": job}
